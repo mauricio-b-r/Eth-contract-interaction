@@ -34,18 +34,66 @@ function App() {
     })()
   }, [contract])
 
+  const waitForConfirmation = async ({ transactionIndex, transactionHash, blockHash, blockNumber }) => {
+    const min_confirmations = 21
+    return new Promise((resolve, reject) => {
+      const start_time = Date.now();
+      const { getBlockNumber, getTransactionFromBlock } = window.web3.eth
+      const checkFlag = async () => {
+        const block_num = await getBlockNumber()
+        const transaction = await getTransactionFromBlock(blockNumber, transactionIndex)
+        console.log(block_num - transaction.blockNumber)
+        if (
+          block_num - transaction.blockNumber >= min_confirmations &&
+          transaction.hash === transactionHash &&
+          transaction.blockHash === blockHash
+        ) {
+          resolve();
+        } else if (Date.now() > start_time + 60000) {
+          reject();
+        } else {
+          setTimeout(checkFlag, 1000);
+        }
+      }
+      checkFlag();
+    });
+  }
+
   useEffect(() => {
     (async () => {
+      // window.web3.eth.subscribe('newBlockHeaders', () => { });
+
       if (contractWss && fetchedProducts) {
+        const fromBlock = window.web3.utils.toHex(22660777)
         // Configure events for updating the products list
-        contractWss.events.NewProduct().on('data', ({ returnValues }) => {
-          updateEventProduct(returnValues)
+        console.log(fromBlock, 'fromblock')
+        contractWss.events.NewProduct({ fromBlock: 'latest' }).on('data', async (data) => {
+          console.log(data, 'new prod')
+          // await waitForConfirmation(data)
+          // console.log('awaited')
         })
-        contractWss.events.DelegateProduct().on('data', ({ returnValues }) => {
-          updateEventProduct(returnValues)
+        contractWss.events.DelegateProduct({ fromBlock: 'latest' }).on('data', async (data) => {
+          // console.log('waitforconfirmation')
+          // await waitForConfirmation(data)
+          // web3.eth.getBlockNumber(function (err, number) { });
+          console.log(data, 'delegated')
+          try {
+            await waitForConfirmation(data)
+            console.log('awaited')
+            updateEventProduct(data.returnValues)
+          } catch (error) {
+            console.log('rejected')
+          }
         })
-        contractWss.events.AcceptProduct().on('data', ({ returnValues }) => {
-          updateEventProduct(returnValues)
+        contractWss.events.AcceptProduct({ fromBlock }).on('data', async (data) => {
+          // console.log(data, 'accepted')
+          try {
+            await waitForConfirmation(data)
+            console.log('awaited')
+            updateEventProduct(data.returnValues)
+          } catch (error) {
+            console.log('rejected')
+          }
         })
       }
     })()

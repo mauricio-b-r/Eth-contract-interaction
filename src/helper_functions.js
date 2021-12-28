@@ -1,14 +1,14 @@
 export const transfer = async (tx, to) => {
-  const { ethereum } = window
+  const { ethereum, web3 } = window
   try {
     const from = ethereum.selectedAddress
     const data = tx.encodeABI();
-    const gas = window.web3.utils.toHex(await tx.estimateGas({ from }));
-    const gasPrice = await ethereum.request({ method: 'eth_gasPrice' })
     const nonce = await ethereum.request({
       method: 'eth_getTransactionCount',
       params: [from, "latest"]
     })
+    const gas = web3.utils.toHex(await tx.estimateGas({ from }));
+    const gasPrice = await ethereum.request({ method: 'eth_gasPrice' })
     const transaction = {
       nonce,
       gasPrice,
