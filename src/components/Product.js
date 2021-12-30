@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { transfer } from '../helper_functions'
+import { delegate, accept } from '../helper_functions'
 import Card from 'react-bootstrap/Card'
 import ListGroup from 'react-bootstrap/ListGroup'
 
@@ -9,13 +9,14 @@ export default function Product({ product, index, contract, account }) {
   const delegateProduct = (e) => {
     e.preventDefault()
     if (!addressRef.current.value) return
-    const tx = contract.methods.delegateProduct(index, addressRef.current.value)
-    transfer(tx, account)
+    delegate(index, addressRef.current.value, contract, account).on("confirmation", (index, data) => {
+      console.log("index", index)
+      console.log("data", data)
+    })
   }
   const acceptProduct = (e) => {
     e.preventDefault()
-    const tx = contract.methods.acceptProduct(index)
-    transfer(tx, account)
+    accept(index, contract, account)
   }
   const DelegateButton = () => {
     return <form onSubmit={delegateProduct}>

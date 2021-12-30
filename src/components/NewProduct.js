@@ -1,18 +1,14 @@
 import React, { useRef } from 'react';
-import { transfer } from '../helper_functions';
+import { mint } from '../helper_functions';
 
 
 export default function NewProduct({ contract, account }) {
   const productRef = useRef('')
-  const mint = (product, contract) => {
-    const tx = contract.methods.createProduct(product)
-    transfer(tx, account)
-  }
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!productRef.current.value) return
-    mint(productRef.current.value, contract)
+    mint(productRef.current.value, contract, account)
   }
 
   return (
