@@ -4,20 +4,18 @@ import Card from 'react-bootstrap/Card'
 import ListGroup from 'react-bootstrap/ListGroup'
 
 
-export default function Product({ product, index, contract }) {
+export default function Product({ product, index, contract, account }) {
   const addressRef = useRef('')
   const delegateProduct = (e) => {
     e.preventDefault()
     if (!addressRef.current.value) return
     const tx = contract.methods.delegateProduct(index, addressRef.current.value)
-    const to = contract.options.address
-    transfer(tx, to)
+    transfer(tx, account)
   }
   const acceptProduct = (e) => {
     e.preventDefault()
     const tx = contract.methods.acceptProduct(index)
-    const to = contract.options.address
-    transfer(tx, to)
+    transfer(tx, account)
   }
   const DelegateButton = () => {
     return <form onSubmit={delegateProduct}>

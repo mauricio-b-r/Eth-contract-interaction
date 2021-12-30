@@ -2,20 +2,19 @@ import React, { useRef } from 'react';
 import { transfer } from '../helper_functions';
 
 
-export default function NewProduct({ contract }) {
+export default function NewProduct({ contract, account }) {
   const productRef = useRef('')
   const mint = (product, contract) => {
-    console.log(product)
     const tx = contract.methods.createProduct(product)
-    const to = contract.options.address
-    transfer(tx, to)
+    transfer(tx, account)
   }
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!productRef.current.value) return
     mint(productRef.current.value, contract)
-
   }
+
   return (
     <div className="row">
       <main role="main" className="col-lg-12 d-flex text-center">
