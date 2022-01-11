@@ -4,6 +4,9 @@ import './App.css';
 import Product from './Product'
 import NewProduct from './NewProduct';
 import useConnection from '../hooks/useConnection';
+import { ButtonGroup, Tab, Tabs, ToggleButton, Row, Col } from 'react-bootstrap';
+import { all as all_tab, created, delegated as delegated_tab } from '../constants/tabs';
+import { not_delegated as not_delegated_filter, delegated as delegated_filter, all as all_filter } from '../constants/filters';
 
 // Providers
 const NODE_URL_WSS = "wss://matic-testnet-archive-ws.bwarelabs.com";
@@ -21,10 +24,19 @@ window.web3 = new Web3(window.ethereum || (window.web3 && window.web3.currentPro
 
 
 function App() {
+
+  const filters = [
+    { name: 'All', value: all_filter },
+    { name: 'Delegated', value: delegated_filter },
+    { name: 'Not delegated', value: not_delegated_filter }
+  ]
+
   const [contract, setContract] = useState(null)
   const [contractWss, setContractWss] = useState(null)
-  const [products, setProducts] = useState([])
   const [fetchedProducts, setFetchedProducts] = useState(false)
+  const [filterValue, setFilterValue] = useState(all_filter);
+  const [key, setKey] = useState(all_tab);
+  const [products, setProducts] = useState([])
   const { isConnected, address, chainId } = useConnection()
 
   useEffect(() => {
@@ -84,16 +96,37 @@ function App() {
     const prods = []
     for (var i = 0; i < size; i++) {
       const prod = await getProductById(i)
+      prod.id = i
       prods.push(prod)
     }
     return prods
   }
 
-  const updateEventProduct = async (values) => {
-    const prod = await contract.methods.products(values.productId).call()
+  const updateEventProduct = async (productId) => {
+    const prod = await contract.methods.products(productId).call()
     const updated_prods = [...products]
-    updated_prods[values.productId] = { ...prod }
+    updated_prods[productId] = { ...prod }
     setProducts(updated_prods)
+  }
+
+  const filteredProducts = () => {
+    let filtered_prods = products.filter((prod) => {
+      switch (key) {
+        case delegated_tab: return (prod.newOwner === address && prod.status === '1');
+        case created: return prod.owner === address;
+        default: return true;
+      }
+    })
+    if (key === all_tab)
+      filtered_prods = filtered_prods.filter((prod) => {
+        switch (filterValue) {
+          case delegated_filter: return prod.status === '1';
+          case not_delegated_filter: return prod.status === '0';
+          default: return true;
+        }
+
+      })
+    return filtered_prods.map((product) => <Product key={product.id} product={product} contract={contract} account={address} />)
   }
 
   return (
@@ -108,14 +141,55 @@ function App() {
       </nav>
       <div className="container mt-5">
         {fetchedProducts &&
-          <NewProduct contract={contract} account={address} />
+          <NewProduct contract={contract} account={address} onNewProduct={updateEventProduct} />
         }
-        <br />
-        <div className="row text-center">
-          {products.map((product, index) => <Product key={index} product={product} index={index} contract={contract} account={address} />)}
-        </div>
+        <Row>
+          <Col md={{ span: key === all_tab ? 10 : 12 }}><Tabs
+            id="controlled-tab"
+            activeKey={key}
+            onSelect={(k) => setKey(k)}
+          >
+            <Tab eventKey={all_tab} title="All">
+            </Tab>
+            <Tab eventKey={delegated_tab} title="Delegated">
+            </Tab>
+            <Tab eventKey={created} title="Created">
+            </Tab>
+          </Tabs>
+          </Col>
+          {key === all_tab &&
+            <Col md={{ span: 2 }}>
+              <Row>
+                <Col md={{ span: 4 }}>
+                  Filter by&nbsp;
+                </Col>
+                <Col md={{ span: 8 }}>
+                  <ButtonGroup>
+                    {filters.map((filter, idx) => (
+                      <ToggleButton
+                        key={idx}
+                        id={`filter-${idx}`}
+                        type="radio"
+                        variant="secondary"
+                        name="filter"
+                        value={filter.value}
+                        checked={filterValue === filter.value}
+                        onChange={(e) => setFilterValue(e.currentTarget.value)}
+                      >
+                        {filter.name}
+                      </ToggleButton>
+                    ))}
+                  </ButtonGroup>
+                </Col>
+              </Row>
+            </Col>
+          }
+        </Row>
+        <Row>
+          {filteredProducts()}
+        </Row>
       </div>
-    </div>
+    </div >
   );
 }
 
